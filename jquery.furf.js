@@ -64,6 +64,55 @@
   };
 
   /**
+   * Set and get deeply nested properties from an object
+   */
+  $.deep = function (obj, prop, val) {
+
+    var props = prop.split('.'),
+        root, i = 0, n, p;
+
+    // Set deep value
+    if (arguments.length > 2) {
+
+      root = obj;
+      n = props.length - 1;
+
+      while (i < n) {
+        p = props[i++];
+        obj = obj[p] = (typeof obj[p] === 'object' || Object.prototype.toString.call(obj[p]) === '[object Function]') ? obj[p] : {};
+      }
+      
+      obj[props[i]] = val;
+      
+      return root;
+
+    // Get deep value
+    } else {
+      n = props.length;
+      while (typeof (obj = obj[props[i]]) !== 'undefined' && ++i < n);
+      return obj;
+    }
+  };
+  
+  /**
+   * Create a namespace on a supplied object
+   */
+  $.namespace = function (obj, ns) {
+
+    var props = (ns || obj).split('.'),
+        i = 0, n = props.length, p;
+    
+    obj = (ns && obj) || window;
+    
+    while (i < n) {
+      p = props[i++];
+      obj = obj[p] = (typeof obj[p] === 'object' || Object.prototype.toString.call(obj[p]) === '[object Function]') ? obj[p] : {};
+    }
+      
+    return obj;
+  };
+
+  /**
    * Adds or creates an abstract interface to an object literal or prototype
    * @param Object obj
    * @param String methods
