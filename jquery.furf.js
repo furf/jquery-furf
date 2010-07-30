@@ -7,33 +7,33 @@
    * proxy function lifted from jQuery 1.4 for backward compatibility 
    */
   $.proxy = $.proxy || function( fn, proxy, thisObject ) {
-		if ( arguments.length === 2 ) {
-			if ( typeof proxy === "string" ) {
-				thisObject = fn;
-				fn = thisObject[ proxy ];
-				proxy = undefined;
+    if ( arguments.length === 2 ) {
+      if ( typeof proxy === "string" ) {
+        thisObject = fn;
+        fn = thisObject[ proxy ];
+        proxy = undefined;
 
-			} else if ( proxy && !jQuery.isFunction( proxy ) ) {
-				thisObject = proxy;
-				proxy = undefined;
-			}
-		}
+      } else if ( proxy && !jQuery.isFunction( proxy ) ) {
+        thisObject = proxy;
+        proxy = undefined;
+      }
+    }
 
-		if ( !proxy && fn ) {
-			proxy = function() {
-				return fn.apply( thisObject || this, arguments );
-			};
-		}
+    if ( !proxy && fn ) {
+      proxy = function() {
+        return fn.apply( thisObject || this, arguments );
+      };
+    }
 
-		// Set the guid of unique handler to the same of original handler, so it
+    // Set the guid of unique handler to the same of original handler, so it
     // can be removed
-		if ( fn ) {
-			proxy.guid = fn.guid = fn.guid || proxy.guid || jQuery.guid++;
-		}
+    if ( fn ) {
+      proxy.guid = fn.guid = fn.guid || proxy.guid || jQuery.guid++;
+    }
 
-		// So proxy can be declared as an argument
-		return proxy;
-	};
+    // So proxy can be declared as an argument
+    return proxy;
+  };
 
   /**
    * proxy function for event callbacks - omits event argument for better
@@ -81,12 +81,12 @@
     });
   };
 
-	/**
-	 * Lifted from YUI 2.6.0
-	 * IE will not enumerate native functions in a derived object even if the
-	 * function was overridden.  This is a workaround for specific functions 
-	 * we care about on the Object prototype. 
-	 */
+  /**
+   * Lifted from YUI 2.6.0
+   * IE will not enumerate native functions in a derived object even if the
+   * function was overridden.  This is a workaround for specific functions 
+   * we care about on the Object prototype. 
+   */
   $.support.nativeEnum = (function () {
   
     var target = { valueOf: function () { return false; } },
@@ -102,14 +102,14 @@
     return target.valueOf();
   })();
 
-	$.IENativeEnumFix = function (target, source) {
-		$.each(['toString', 'valueOf'], function (i, name) {
-		  var fn = source[name];
-		  if ($.isFunction(fn) && fn !== Object.prototype[name]) {
-			  target[name] = fn;
-		  }
-		});
-	};
+  $.IENativeEnumFix = function (target, source) {
+    $.each(['toString', 'valueOf'], function (i, name) {
+      var fn = source[name];
+      if ($.isFunction(fn) && fn !== Object.prototype[name]) {
+        target[name] = fn;
+      }
+    });
+  };
 
   /**
    * Pseudo-classical OOP inheritance
@@ -119,38 +119,38 @@
    */
   $.inherit = function (child, parent, overrides) {
 
-		if (!$.isFunction(parent) || !$.isFunction(child)) {
-		  throw new Error('$.inherit failed, please check that all dependencies are included.');
-		}
+    if (!$.isFunction(parent) || !$.isFunction(child)) {
+      throw new Error('$.inherit failed, please check that all dependencies are included.');
+    }
 
     var name;
 
-		function F () {
-		  this._parent_ = parent.prototype;
-		}
-		
-		F.prototype = parent.prototype;
-		
-		child.prototype = new F ();
-		child.prototype.constructor = child;
+    function F () {
+      this._parent_ = parent.prototype;
+    }
+    
+    F.prototype = parent.prototype;
+    
+    child.prototype = new F ();
+    child.prototype.constructor = child;
     child._parent_ = parent.prototype;
-		
-		if (parent.prototype.constructor === Object.prototype.constructor) {
-		  parent.prototype.constructor = parent;
-		}
-		
-		if (overrides) {
-		  for (name in overrides) {
-				if (overrides.hasOwnProperty(name)) {
-				  child.prototype[name] = overrides[name];
-				}
-		  }
+    
+    if (parent.prototype.constructor === Object.prototype.constructor) {
+      parent.prototype.constructor = parent;
+    }
+    
+    if (overrides) {
+      for (name in overrides) {
+        if (overrides.hasOwnProperty(name)) {
+          child.prototype[name] = overrides[name];
+        }
+      }
 
-		  if (!$.support.nativeEnum) {
-			  $.IENativeEnumFix(child.prototype, overrides);
-		  }
-		}
-	};
+      if (!$.support.nativeEnum) {
+        $.IENativeEnumFix(child.prototype, overrides);
+      }
+    }
+  };
 
   /**
    * Add jQuery custom events to any object
