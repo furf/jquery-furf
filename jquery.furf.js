@@ -3,6 +3,8 @@
  */
 (function (window, document, $) {
 
+  $.support.arraySortMaintainsIndex = ![0,1].sort(function(){return 0})[0];
+
   /**
    * proxy function lifted from jQuery 1.4 for backward compatibility 
    */
@@ -113,13 +115,20 @@
   };
 
   /**
+   * Ensure that we have an array to iterate
+   */
+  $.ensureArray = function (arr) {
+    return $.isArray(arr) ? arr : typeof arr !== 'undefined' ? [arr] : [];
+  };
+  
+  /**
    * Adds or creates an abstract interface to an object literal or prototype
    * @param Object obj
    * @param String methods
    */
   $.specify = function (obj, methods) {
 
-    obj = $.isFunction(obj) ? z : obj;
+    obj = $.isFunction(obj) ? obj.prototype : obj;
     
     $.each($.unwhite(methods), function (i, name) {
       if (!$.isFunction(obj[name])) {
