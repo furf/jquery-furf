@@ -3,7 +3,9 @@
  */
 (function (window, document, $) {
 
-  $.support.arraySortMaintainsIndex = ![0,1].sort(function(){return 0})[0];
+  $.support.arraySortMaintainsIndex = ![0,1].sort(function () {
+    return 0;
+  })[0];
 
   /**
    * proxy function lifted from jQuery 1.4 for backward compatibility 
@@ -41,7 +43,7 @@
    * proxy function for event callbacks - omits event argument for better
    * compatibility with external APIs
    */
-  $.eventProxy = function (fn, proxy, thisObject) {
+  $.eventProxy = function (fn, proxy, context) {
     fn = $.proxy.apply(this, arguments);
     return function () {
       return fn.apply(this, Array.prototype.slice.call(arguments, 1));
@@ -122,6 +124,43 @@
   };
   
   /**
+   * Re-index an object, optionally maintaining the original index and/or
+   * modifying the original object (instead of a clone)
+   */
+  $.rehash = function (source, property, maintainOriginalKey, modifySource) {
+
+    // Use source object or a deep clone
+    var target = modifySource ? source : $.extend(true, {}, source),
+        originalKey, value, newKey;
+  
+    for (originalKey in target) {
+      if (target.hasOwnProperty(originalKey)) {
+
+        value = target[originalKey];
+        
+        if (property in value) {
+          newKey = value[property];
+          target[newKey] = value;
+
+          if (!maintainOriginalKey) {
+            delete target[originalKey];
+          }
+        }
+      }
+    }
+    
+    return target;
+  };
+  
+  $.truncate = function (str, n) {
+    return str.length < n ? str : (new RegExp('^(.{0,' + (n - 1) + '}\\S)(\\s|$)')).exec(str)[1] + '...';
+  };
+
+  $.ordinal = function (n) {
+    return ['th', 'st', 'nd', 'rd'][(n = n < 0 ? -n : n) > 10 && n < 14 || !(n = ~~n % 10) || n > 3 ? 0 : n];
+  };
+  
+  /**
    * Adds or creates an abstract interface to an object literal or prototype
    * @param Object obj
    * @param String methods
@@ -184,14 +223,14 @@
     var name;
 
     function F () {
-      this._parent_ = parent.prototype;
+      this._parent = parent.prototype;
     }
     
     F.prototype = parent.prototype;
     
     child.prototype = new F ();
     child.prototype.constructor = child;
-    child._parent_ = parent.prototype;
+    child.parent = parent.prototype;
     
     if (parent.prototype.constructor === Object.prototype.constructor) {
       parent.prototype.constructor = parent;
@@ -209,6 +248,24 @@
       }
     }
   };
+
+
+  $.singleton = function (constructor, overrides) {
+    
+    var instance;
+    
+    function F () {};
+    $.inherit(F, constructor, overrides);
+    
+    return function () {
+      if (typeof instance === 'undefined') {
+        instance = new F();
+        constructor.apply(instance, arguments);
+      }
+      return instance;
+    };
+  };
+
 
   /**
    * Add jQuery custom events to any object
@@ -372,7 +429,9 @@
         error: $.proxy(function (xhr, status, e) {
           
           // If defined, execute the error callback
-          error && error.apply(this, arguments);
+          if (error) {
+            error.apply(this, arguments);
+          }
 
           // Trigger the onLoadError event listeners
           this.trigger('onLoadError', arguments);
@@ -386,7 +445,9 @@
         complete: $.proxy(function (xhr, status) {
 
           // If defined, execute the complete callback
-          complete && complete.apply(this, arguments);
+          if (complete) {
+            complete.apply(this, arguments);
+          }
 
           // Trigger the onLoadComplete event listeners
           this.trigger('onLoadComplete', arguments);
@@ -399,5 +460,215 @@
 
     return obj;
   };
+
+  /**
+   * $.renderable
+   * 
+   * @param Object obj Object to be augmented with renderable behavior
+   * @param String tpl Template or URL to template file
+   * @param Various elem (optional) Target DOM element
+   */
+  $.renderable = function (obj, tpl, elem) {
+
+    // Implement bindable behavior, adding custom methods for render events
+    obj = $.bindable(obj, 'onBeforeRender onRender');
+
+    // Create a jQuery target to handle DOM load 
+    if (typeof elem !== 'undefined') {
+      elem = $(elem);
+    }
+
+    // Create renderer function from supplied template
+    var renderer = $.template(tpl);
+    
+    // Augment the object with a render method
+    obj.render = function (data, raw) {
+      
+      this.trigger('onBeforeRender', [data]);
+
+      var ret = renderer(data, raw);        
+      
+      if (elem) {
+        elem.append(ret);
+      }
+      
+      this.trigger('onRender', [ret]);
+      
+      return ret;
+    };
+
+    return obj;
+  };
+
+  /**
+   * $.pollable
+   *
+   * @param Object obj Object to be augmented with pollable behavior
+   */
+  $.pollable = function (obj) {
+
+    // Implement bindable behavior, adding custom methods for pollable events
+    obj = $.bindable(obj, 'onStart onExecute onStop');
+
+    // Augment the object with an pollable methods
+    $.extend(obj, {
+
+      /**
+       * @param String method 
+       * @return Boolean
+       */
+      isExecuting: function (method) {
+        var timers = $(this).data('pollable.timers') || {};
+        return method in timers;
+      },
+
+      /**
+       * @param String method
+       * @param Number interval
+       * @param Boolean immediately
+       */
+      start: function (method, interval, immediately) {
+        
+        var self, timers, n;
+        
+        if (!this.isExecuting(method) && $.isFunction(this[method]) && interval > 0) {
+
+          self   = $(this);
+          timers = self.data('pollable.timers') || {};
+          n      = 0;
+
+          // Store the proxy method as a property of the original method
+          // for later removal
+          this[method].proxy = $.proxy(function () {
+            this.trigger('onExecute', [method, this[method](n++)]);
+          }, this);
+
+          // Start timer and add to hash
+          timers[method] = window.setInterval(this[method].proxy, interval);
+
+          self.data('pollable.timers', timers);
+
+          // Fire onStart event with method name
+          this.trigger('onStart', [method]);
+          
+          if (immediately) {
+            this[method].proxy();
+          }
+        }
+        
+        return this;
+      },
+
+      /**
+       * @param String method
+       */
+      stop: function (method) {
+        
+        var self, timers;
+        
+        if (this.isExecuting(method)) {
+
+          self   = $(this);
+          timers = self.data('pollable.timers') || {};
+          
+          // Clear timer
+          window.clearInterval(timers[method]);
+          
+          // Remove timer from hash
+          delete timers[method];
+          
+          // Remove proxy method from original method
+          delete this[method].proxy;
+          
+          self.data('pollable.timers', timers);
+          
+          // Fire onStop event with method name
+          this.trigger('onStop', [method]);
+        }
+        return this;
+      }
+    });
+
+    return obj;
+  };
+
+
+
+  // /**
+  //  * $.cacheable
+  //  *
+  //  * @param Object obj Object to be augmented with cacheable behavior
+  //  */
+  // $.cacheable = function (obj) {
+  // 
+  //   // Allow use of prototype for shorthanding the augmentation of classes
+  //   obj = obj.prototype || obj;
+  //   
+  //   $.extend(obj, {
+  //     
+  //     cacheSet: function(key, value, ttl) {
+  // 
+  //       var self  = $(this),
+  //           cache = self.data('cacheable.cache') || {};
+  // 
+  //       cache[key] = {
+  //         value: value,
+  //         time:  ttl && new Date(),
+  //         ttl:   ttl
+  //       };
+  // 
+  //       self.data('cacheable.cache', cache);
+  //     },
+  //             
+  //     cacheGet: function(key) {
+  // 
+  //       var cache = $(this).data('cacheable.cache') || {},
+  //           data;
+  // 
+  //       if (key) {
+  // 
+  //         if (key in cache) {
+  //           
+  //           data = cache[key];
+  //           
+  //           if (data.ttl && (new Date()) - data.ttl > data.time) {
+  //             this.cacheUnset(key);
+  //           } else {
+  //             return data.value;
+  //           }
+  //         }
+  // 
+  //       } else {
+  //         return cache;
+  //       }
+  //     },
+  //             
+  //     cacheHas: function(key) {
+  //       var cache = $(this).data('cacheable.cache') || {};
+  //       return (key in cache);
+  //     },
+  //                             
+  //     cacheUnset: function(key) {
+  //       
+  //       var self  = $(this),
+  //           cache = self.data('cacheable.cache');
+  //       
+  //       if (cache && key in cache) {
+  //         
+  //         cache[key] = undefined;
+  //         delete cache[key];
+  // 
+  //         self.data('cacheable.cache', cache);
+  //       }
+  //     },
+  //             
+  //     cacheEmpty: function() {
+  //       $(this).data('cacheable.cache', {});
+  //     }
+  // 
+  //   });
+  //   
+  //   return obj;
+  // };
 
 })(this, this.document, this.jQuery);
