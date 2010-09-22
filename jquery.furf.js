@@ -1,26 +1,26 @@
 /**
- * $.furf extensions to jQuery
+ * jQuery.furf extensions to jQuery
  */
-;(function (window, document, $) {
+;(function (window, document, jQuery) {
 
 
   /**
    * Chrome loses original sort order when using a sort function
    */
-  $.support.arraySortMaintainsIndex = ![0,1].sort(function () {
+  jQuery.support.arraySortMaintainsIndex = ![0,1].sort(function () {
     return 0;
   })[0];
 
 
   /**
-   * Duck punch regular expression support into $.fn.removeClass
+   * Duck punch regular expression support into jQuery.fn.removeClass
    */
-  var removeClass = $.fn.removeClass;
+  var removeClass = jQuery.fn.removeClass;
 
-  $.fn.removeClass = function (value) {
+  jQuery.fn.removeClass = function (value) {
     if (value instanceof RegExp) {
       return this.each(function () {
-        this.className = $.white($.grep($.unwhite(this.className), function (className) {
+        this.className = jQuery.white(jQuery.grep(jQuery.unwhite(this.className), function (className) {
           return !value.test(className);
         }));
       });
@@ -33,7 +33,7 @@
   /**
    * proxy function lifted from jQuery 1.4 for backward compatibility 
    */
-  $.proxy = $.proxy || function( fn, proxy, thisObject ) {
+  jQuery.proxy = jQuery.proxy || function( fn, proxy, thisObject ) {
     if ( arguments.length === 2 ) {
       if ( typeof proxy === "string" ) {
         thisObject = fn;
@@ -67,8 +67,8 @@
    * proxy function for event callbacks - omits event argument for better
    * compatibility with external APIs
    */
-  $.eventProxy = function (fn, proxy, context) {
-    fn = $.proxy.apply(this, arguments);
+  jQuery.eventProxy = function (fn, proxy, context) {
+    fn = jQuery.proxy.apply(this, arguments);
     return function () {
       return fn.apply(this, Array.prototype.slice.call(arguments, 1));
     };
@@ -79,7 +79,7 @@
    * Converts an array to a whitespace-delimited string
    * @param Array arr
    */
-  $.white = function (arr) {
+  jQuery.white = function (arr) {
     return arr.join(' ');
   };
   
@@ -89,8 +89,9 @@
    * @param String str
    */
   var rwhite = /\s+/;
-  $.unwhite = function (str) {
-    str = $.trim(str);
+  
+  jQuery.unwhite = function (str) {
+    str = jQuery.trim(str);
     return str.length ? str.split(rwhite) : [];
   };
 
@@ -98,7 +99,9 @@
   /**
    * Set and get deeply nested properties from an object
    */
-  $.deep = function (obj, prop, val) {
+  var toString = Object.prototype.toString;
+  
+  jQuery.deep = function (obj, prop, val) {
 
     var props = prop.split('.'),
         root, i = 0, n, p;
@@ -111,7 +114,7 @@
 
       while (i < n) {
         p = props[i++];
-        obj = obj[p] = (typeof obj[p] === 'object' || Object.prototype.toString.call(obj[p]) === '[object Function]') ? obj[p] : {};
+        obj = obj[p] = (typeof obj[p] === 'object' || toString.call(obj[p]) === '[object Function]') ? obj[p] : {};
       }
       
       obj[props[i]] = val;
@@ -121,7 +124,7 @@
     // Get deep value
     } else {
       n = props.length;
-      while (typeof (obj = obj[props[i]]) !== 'undefined' && ++i < n){};
+      while (typeof (obj = obj[props[i]]) !== 'undefined' && ++i < n){}
       return obj;
     }
   };
@@ -130,7 +133,7 @@
   /**
    * Create a namespace on a supplied object
    */
-  $.namespace = function (obj, ns) {
+  jQuery.namespace = function (obj, ns) {
 
     var props = (ns || obj).split('.'),
         i = 0, n = props.length, p;
@@ -139,7 +142,7 @@
     
     while (i < n) {
       p = props[i++];
-      obj = obj[p] = (typeof obj[p] === 'object' || Object.prototype.toString.call(obj[p]) === '[object Function]') ? obj[p] : {};
+      obj = obj[p] = (typeof obj[p] === 'object' || toString.call(obj[p]) === '[object Function]') ? obj[p] : {};
     }
       
     return obj;
@@ -149,15 +152,15 @@
   /**
    * Ensure that we have an array to iterate
    */
-  $.ensureArray = function (arr) {
-    return $.isArray(arr) ? arr : typeof arr !== 'undefined' ? [arr] : [];
+  jQuery.ensureArray = function (arr) {
+    return jQuery.isArray(arr) ? arr : typeof arr !== 'undefined' ? [arr] : [];
   };
 
 
   /**
    * Ensure that we have a date to the prom
    */
-  $.ensureDate = function (date) {
+  jQuery.ensureDate = function (date) {
     return date ? date instanceof Date ? date : new Date(date) : new Date();
   };
 
@@ -166,36 +169,44 @@
    * Re-index an object, optionally maintaining the original index and/or
    * modifying the original object (instead of a clone)
    */
-  $.rehash = function (source, property, maintainOriginalKey, modifySource) {
+  jQuery.rehash = function (source, property, maintainSourceKey, modifySource) {
 
-    // Use source object or a deep clone
-    var target = modifySource ? source : $.extend(true, {}, source),
-        originalKey, value, newKey;
-  
-    for (originalKey in target) {
-      if (target.hasOwnProperty(originalKey)) {
+    var target = modifySource ? source : {}, sourceKey, sourceVal, targetKey;
 
-        value = target[originalKey];
-        
-        if (property in value) {
-          newKey = value[property];
-          target[newKey] = value;
+    for (sourceKey in source) {
+      if (source.hasOwnProperty(sourceKey)) {
 
-          if (!maintainOriginalKey) {
-            delete target[originalKey];
+        sourceVal = source[sourceKey];
+
+        if (property in sourceVal) {
+          targetKey = sourceVal[property];
+
+          if (targetKey in target) {
+            (target[targetKey] = jQuery.ensureArray(target[targetKey])).push(sourceVal);
+          } else {
+            target[targetKey] = sourceVal;
+          }
+
+          if (modifySource && !maintainSourceKey) {
+            delete target[sourceKey];
+          } else if (maintainSourceKey && !modifySource) {
+            target[sourceKey] = sourceVal;
           }
         }
+
       }
     }
-    
+
     return target;
   };
-  
-  $.truncate = function (str, n) {
-    return str.length < n ? str : (new RegExp('^(.{0,' + (n - 1) + '}\\S)(\\s|$)')).exec(str)[1] + '...';
+
+
+  jQuery.truncate = function (str, n) {
+    return str.length < n ? str : (new RegExp('^(.{0,' + (n - 1) + '}\\S)(\\s|jQuery)')).exec(str)[1] + '...';
   };
 
-  $.ordinal = function (n) {
+
+  jQuery.ordinal = function (n) {
     return ['th', 'st', 'nd', 'rd'][(n = n < 0 ? -n : n) > 10 && n < 14 || !(n = ~~n % 10) || n > 3 ? 0 : n];
   };
   
@@ -205,12 +216,12 @@
    * @param Object obj
    * @param String methods
    */
-  $.specify = function (obj, methods) {
+  jQuery.specify = function (obj, methods) {
 
-    obj = $.isFunction(obj) ? obj.prototype : obj;
+    obj = jQuery.isFunction(obj) ? obj.prototype : obj;
     
-    $.each($.unwhite(methods), function (i, name) {
-      if (!$.isFunction(obj[name])) {
+    jQuery.each(jQuery.unwhite(methods), function (i, name) {
+      if (!jQuery.isFunction(obj[name])) {
         obj[name] = function () {
           throw new Error(name + ' is an abstract method which must be implemented or overloaded.');
         };
@@ -225,7 +236,7 @@
    * function was overridden.  This is a workaround for specific functions 
    * we care about on the Object prototype. 
    */
-  $.support.nativeEnum = (function () {
+  jQuery.support.nativeEnum = (function () {
   
     var target = { valueOf: function () { return false; } },
         source = { valueOf: function () { return true; } },
@@ -240,10 +251,10 @@
     return target.valueOf();
   })();
 
-  $.IENativeEnumFix = function (target, source) {
-    $.each(['toString', 'valueOf'], function (i, name) {
+  jQuery.IENativeEnumFix = function (target, source) {
+    jQuery.each(['toString', 'valueOf'], function (i, name) {
       var fn = source[name];
-      if ($.isFunction(fn) && fn !== Object.prototype[name]) {
+      if (jQuery.isFunction(fn) && fn !== Object.prototype[name]) {
         target[name] = fn;
       }
     });
@@ -256,10 +267,10 @@
    * @param Function parent
    * @param Object overrides
    */
-  $.inherit = function (child, parent, overrides) {
+  jQuery.inherit = function (child, parent, overrides) {
 
-    if (!$.isFunction(parent) || !$.isFunction(child)) {
-      throw new Error('$.inherit failed, please check that all dependencies are included.');
+    if (!jQuery.isFunction(parent) || !jQuery.isFunction(child)) {
+      throw new Error('jQuery.inherit failed, please check that all dependencies are included.');
     }
 
     var name;
@@ -285,8 +296,8 @@
         }
       }
 
-      if (!$.support.nativeEnum) {
-        $.IENativeEnumFix(child.prototype, overrides);
+      if (!jQuery.support.nativeEnum) {
+        jQuery.IENativeEnumFix(child.prototype, overrides);
       }
     }
   };
@@ -297,19 +308,19 @@
    * @param Object obj
    * @param String types
    */
-  $.bindable = function (obj, types) {
+  jQuery.bindable = function (obj, types) {
 
     /**
      * Allow use of prototype for shorthanding the augmentation of classes
      */
-    obj = $.isFunction(obj) ? obj.prototype : obj;
+    obj = jQuery.isFunction(obj) ? obj.prototype : obj;
 
     /**
      * Augment the object with jQuery's bind, one, and unbind event methods
      */
-    $(['bind', 'one', 'unbind']).each(function (i, method) {
+    jQuery(['bind', 'one', 'unbind']).each(function (i, method) {
       obj[method] = function (type, data, fn, thisObject) {
-        $(this)[method](type, data, fn, thisObject);
+        jQuery(this)[method](type, data, fn, thisObject);
         return this;
       };
     });
@@ -320,9 +331,9 @@
      * infinite recursion) when the event type matches the method name
      */ 
     obj.trigger = function (type, data) {
-      var event = new $.Event(type);
+      var event = new jQuery.Event(type);
       event.preventDefault();
-      $(this).trigger(event, data);
+      jQuery(this).trigger(event, data);
       return this;
     };
 
@@ -331,7 +342,7 @@
      * to specified events
      */
     if (typeof types === 'string') {
-      $.each($.unwhite(types), function (i, type) {
+      jQuery.each(jQuery.unwhite(types), function (i, type) {
         obj[type] = function (data, fn, thisObject) {
           return arguments.length ? this.bind(type, data, fn, thisObject) : this.trigger(type);
         };
@@ -343,15 +354,15 @@
   
 
   /**
-   * $.loadable
+   * jQuery.loadable
    *
    * @param Object obj Object to be augmented with bindable behavior
-   * @param Object defaultCfg Default $.ajax configuration object
+   * @param Object defaultCfg Default jQuery.ajax configuration object
    */
-  $.loadable = function (obj, defaultCfg) {
+  jQuery.loadable = function (obj, defaultCfg) {
 
     // Implement bindable behavior, adding custom methods for Ajax events
-    obj = $.bindable(obj, 'onLoadBeforeSend onLoadAbort onLoadSuccess onLoadError onLoadComplete');
+    obj = jQuery.bindable(obj, 'onLoadBeforeSend onLoadAbort onLoadSuccess onLoadError onLoadComplete');
 
     // Allow URL as config (shortcut)
     if (typeof defaultCfg === 'string') {
@@ -362,7 +373,7 @@
 
     /**
      * Execute the XMLHTTPRequest
-     * @param Object cfg Overload $.ajax configuration object
+     * @param Object cfg Overload jQuery.ajax configuration object
      */
     obj.load = function (cfg) {   
 
@@ -376,7 +387,7 @@
       }
       
       // Extend default config with runtime config
-      cfg = $.extend(true, {}, defaultCfg, cfg);
+      cfg = jQuery.extend(true, {}, defaultCfg, cfg);
       
       // Cache configured callbacks so they can be called from wrapper
       // functions below.
@@ -385,19 +396,19 @@
       error      = cfg.error;
       complete   = cfg.complete;
 
-      // Overload each of the configured $.ajax callback methods with an
+      // Overload each of the configured jQuery.ajax callback methods with an
       // evented wrapper function. Each wrapper function executes the
       // configured callback in the scope of the loadable object and then
       // fires the corresponding event, passing to it the return value of
       // the configured callback or the unmodified arguments if no callback
       // is supplied or the return value is undefined.
-      $.extend(cfg, {
+      jQuery.extend(cfg, {
         
         /**
          * @param XMLHTTPRequest xhr
          * @param Object cfg
          */
-        beforeSend: $.proxy(function (xhr, cfg) {
+        beforeSend: jQuery.proxy(function (xhr, cfg) {
 
           // If defined, execute the beforeSend callback and store its return
           // value for later return from this proxy function -- used for
@@ -422,7 +433,7 @@
          * @param String status
          * @param XMLHTTPRequest xhr
          */
-        success: $.proxy(function (data, status, xhr) {
+        success: jQuery.proxy(function (data, status, xhr) {
 
           var ret;
 
@@ -452,7 +463,7 @@
          * @param String status
          * @param Error e
          */
-        error: $.proxy(function (xhr, status, e) {
+        error: jQuery.proxy(function (xhr, status, e) {
           
           // If defined, execute the error callback
           if (error) {
@@ -468,7 +479,7 @@
          * @param XMLHTTPRequest xhr
          * @param String status
          */
-        complete: $.proxy(function (xhr, status) {
+        complete: jQuery.proxy(function (xhr, status) {
 
           // If defined, execute the complete callback
           if (complete) {
@@ -481,7 +492,7 @@
         }, this)
       });
 
-      return $.ajax(cfg);        
+      return jQuery.ajax(cfg);        
     };
 
     return obj;
@@ -489,24 +500,24 @@
 
 
   /**
-   * $.renderable
+   * jQuery.renderable
    * 
    * @param Object obj Object to be augmented with renderable behavior
    * @param String tpl Template or URL to template file
    * @param Various elem (optional) Target DOM element
    */
-  $.renderable = function (obj, tpl, elem) {
+  jQuery.renderable = function (obj, tpl, elem) {
 
     // Implement bindable behavior, adding custom methods for render events
-    obj = $.bindable(obj, 'onBeforeRender onRender');
+    obj = jQuery.bindable(obj, 'onBeforeRender onRender');
 
     // Create a jQuery target to handle DOM load 
     if (typeof elem !== 'undefined') {
-      elem = $(elem);
+      elem = jQuery(elem);
     }
 
     // Create renderer function from supplied template
-    var renderer = $.template(tpl);
+    var renderer = jQuery.template(tpl);
 
     // Augment the object with a render method
     obj.render = function (data, raw) {
@@ -530,24 +541,24 @@
 
 
   /**
-   * $.pollable
-   *
+   * jQuery.pollable
+   * @todo add passing of anon function to start?
    * @param Object obj Object to be augmented with pollable behavior
    */
-  $.pollable = function (obj) {
+  jQuery.pollable = function (obj) {
 
     // Implement bindable behavior, adding custom methods for pollable events
-    obj = $.bindable(obj, 'onStart onExecute onStop');
+    obj = jQuery.bindable(obj, 'onStart onExecute onStop');
 
     // Augment the object with an pollable methods
-    $.extend(obj, {
+    jQuery.extend(obj, {
 
       /**
        * @param String method 
        * @return Boolean
        */
       isExecuting: function (method) {
-        var timers = $(this).data('pollable.timers') || {};
+        var timers = jQuery(this).data('pollable.timers') || {};
         return method in timers;
       },
 
@@ -556,20 +567,26 @@
        * @param Number interval
        * @param Boolean immediately
        */
-      start: function (method, interval, immediately) {
+      start: function (method, interval, data, immediately) {
         
-        var self, timers, n;
+        var self, timers;
         
-        if (!this.isExecuting(method) && $.isFunction(this[method]) && interval > 0) {
+        if (typeof data === 'boolean') {
+          immediately = data;
+          data = null;
+        }
 
-          self   = $(this);
+        data = data || [];
+        
+        if (!this.isExecuting(method) && jQuery.isFunction(this[method]) && interval > 0) {
+
+          self   = jQuery(this);
           timers = self.data('pollable.timers') || {};
-          n      = 0;
 
           // Store the proxy method as a property of the original method
           // for later removal
-          this[method].proxy = $.proxy(function () {
-            this.trigger('onExecute', [method, this[method](n++)]);
+          this[method].proxy = jQuery.proxy(function () {
+            this.trigger('onExecute', [method, this[method].apply(this, data)]);
           }, this);
 
           // Start timer and add to hash
@@ -597,7 +614,7 @@
         
         if (this.isExecuting(method)) {
 
-          self   = $(this);
+          self   = jQuery(this);
           timers = self.data('pollable.timers') || {};
           
           // Clear timer
@@ -624,20 +641,20 @@
 
 
   // /**
-  //  * $.cacheable
+  //  * jQuery.cacheable
   //  *
   //  * @param Object obj Object to be augmented with cacheable behavior
   //  */
-  // $.cacheable = function (obj) {
+  // jQuery.cacheable = function (obj) {
   // 
   //   // Allow use of prototype for shorthanding the augmentation of classes
   //   obj = obj.prototype || obj;
   //   
-  //   $.extend(obj, {
+  //   jQuery.extend(obj, {
   //     
   //     cacheSet: function(key, value, ttl) {
   // 
-  //       var self  = $(this),
+  //       var self  = jQuery(this),
   //           cache = self.data('cacheable.cache') || {};
   // 
   //       cache[key] = {
@@ -651,7 +668,7 @@
   //             
   //     cacheGet: function(key) {
   // 
-  //       var cache = $(this).data('cacheable.cache') || {},
+  //       var cache = jQuery(this).data('cacheable.cache') || {},
   //           data;
   // 
   //       if (key) {
@@ -673,13 +690,13 @@
   //     },
   //             
   //     cacheHas: function(key) {
-  //       var cache = $(this).data('cacheable.cache') || {};
+  //       var cache = jQuery(this).data('cacheable.cache') || {};
   //       return (key in cache);
   //     },
   //                             
   //     cacheUnset: function(key) {
   //       
-  //       var self  = $(this),
+  //       var self  = jQuery(this),
   //           cache = self.data('cacheable.cache');
   //       
   //       if (cache && key in cache) {
@@ -692,7 +709,7 @@
   //     },
   //             
   //     cacheEmpty: function() {
-  //       $(this).data('cacheable.cache', {});
+  //       jQuery(this).data('cacheable.cache', {});
   //     }
   // 
   //   });
