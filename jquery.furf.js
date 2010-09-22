@@ -1,11 +1,34 @@
 /**
  * $.furf extensions to jQuery
  */
-(function (window, document, $) {
+;(function (window, document, $) {
 
+
+  /**
+   * Chrome loses original sort order when using a sort function
+   */
   $.support.arraySortMaintainsIndex = ![0,1].sort(function () {
     return 0;
   })[0];
+
+
+  /**
+   * Duck punch regular expression support into $.fn.removeClass
+   */
+  var removeClass = $.fn.removeClass;
+
+  $.fn.removeClass = function (value) {
+    if (value instanceof RegExp) {
+      return this.each(function () {
+        this.className = $.white($.grep($.unwhite(this.className), function (className) {
+          return !value.test(className);
+        }));
+      });
+    } else {
+      return removeClass.apply(this, arguments);
+    }
+  };
+
 
   /**
    * proxy function lifted from jQuery 1.4 for backward compatibility 
@@ -39,6 +62,7 @@
     return proxy;
   };
 
+  
   /**
    * proxy function for event callbacks - omits event argument for better
    * compatibility with external APIs
@@ -50,6 +74,7 @@
     };
   };
 
+
   /**
    * Converts an array to a whitespace-delimited string
    * @param Array arr
@@ -58,14 +83,17 @@
     return arr.join(' ');
   };
   
+
   /**
    * Converts a whitespace-delimited string to an array
    * @param String str
    */
+  var rwhite = /\s+/;
   $.unwhite = function (str) {
     str = $.trim(str);
-    return str.length ? str.split(/\s+/) : [];
+    return str.length ? str.split(rwhite) : [];
   };
+
 
   /**
    * Set and get deeply nested properties from an object
@@ -93,11 +121,12 @@
     // Get deep value
     } else {
       n = props.length;
-      while (typeof (obj = obj[props[i]]) !== 'undefined' && ++i < n);
+      while (typeof (obj = obj[props[i]]) !== 'undefined' && ++i < n){};
       return obj;
     }
   };
   
+
   /**
    * Create a namespace on a supplied object
    */
@@ -116,13 +145,23 @@
     return obj;
   };
 
+
   /**
    * Ensure that we have an array to iterate
    */
   $.ensureArray = function (arr) {
     return $.isArray(arr) ? arr : typeof arr !== 'undefined' ? [arr] : [];
   };
-  
+
+
+  /**
+   * Ensure that we have a date to the prom
+   */
+  $.ensureDate = function (date) {
+    return date ? date instanceof Date ? date : new Date(date) : new Date();
+  };
+
+
   /**
    * Re-index an object, optionally maintaining the original index and/or
    * modifying the original object (instead of a clone)
@@ -160,6 +199,7 @@
     return ['th', 'st', 'nd', 'rd'][(n = n < 0 ? -n : n) > 10 && n < 14 || !(n = ~~n % 10) || n > 3 ? 0 : n];
   };
   
+
   /**
    * Adds or creates an abstract interface to an object literal or prototype
    * @param Object obj
@@ -177,6 +217,7 @@
       }
     });
   };
+
 
   /**
    * Lifted from YUI 2.6.0
@@ -207,6 +248,7 @@
       }
     });
   };
+
 
   /**
    * Pseudo-classical OOP inheritance
@@ -247,23 +289,6 @@
         $.IENativeEnumFix(child.prototype, overrides);
       }
     }
-  };
-
-
-  $.singleton = function (constructor, overrides) {
-    
-    var instance;
-    
-    function F () {};
-    $.inherit(F, constructor, overrides);
-    
-    return function () {
-      if (typeof instance === 'undefined') {
-        instance = new F();
-        constructor.apply(instance, arguments);
-      }
-      return instance;
-    };
   };
 
 
@@ -316,6 +341,7 @@
     return obj;
   };
   
+
   /**
    * $.loadable
    *
@@ -461,6 +487,7 @@
     return obj;
   };
 
+
   /**
    * $.renderable
    * 
@@ -480,16 +507,17 @@
 
     // Create renderer function from supplied template
     var renderer = $.template(tpl);
-    
+
     // Augment the object with a render method
     obj.render = function (data, raw) {
       
       this.trigger('onBeforeRender', [data]);
 
-      var ret = renderer(data, raw);        
+      // Force raw HTML if elem exists (saves effort)
+      var ret = renderer(data, !!elem || raw);        
       
       if (elem) {
-        elem.append(ret);
+        elem.html(ret);
       }
       
       this.trigger('onRender', [ret]);
@@ -499,6 +527,7 @@
 
     return obj;
   };
+
 
   /**
    * $.pollable
