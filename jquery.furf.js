@@ -1,4 +1,79 @@
 /**
+ * BACK-COMPAT FOR jQuery v1.3.2
+ */
+;(function (window, document, jQuery) {
+
+  /**
+   * The following two functions are required for a good amount of
+   * functionality below. They are provided for compatibility with jQuery
+   * versions less than 1.4. If you are using jQuery 1.4 or later, feel free
+   * to delete them from the code.
+   */
+
+  /**
+   * proxy function lifted from jQuery 1.4 for backward compatibility
+   */
+  jQuery.proxy = jQuery.proxy || function( fn, proxy, thisObject ) {
+    if ( arguments.length === 2 ) {
+      if ( typeof proxy === "string" ) {
+        thisObject = fn;
+        fn = thisObject[ proxy ];
+        proxy = undefined;
+
+      } else if ( proxy && !jQuery.isFunction( proxy ) ) {
+        thisObject = proxy;
+        proxy = undefined;
+      }
+    }
+
+    if ( !proxy && fn ) {
+      proxy = function() {
+        return fn.apply( thisObject || this, arguments );
+      };
+    }
+
+    // Set the guid of unique handler to the same of original handler, so it
+    // can be removed
+    if ( fn ) {
+      proxy.guid = fn.guid = fn.guid || proxy.guid || jQuery.guid++;
+    }
+
+    // So proxy can be declared as an argument
+    return proxy;
+  };
+
+  /**
+   * jQuery.parseJSON lifted from jQuery 1.4 for backward compatibility
+   */
+  jQuery.parseJSON = jQuery.parseJSON || function( data ) {
+		if ( typeof data !== "string" || !data ) {
+			return null;
+		}
+
+		// Make sure leading/trailing whitespace is removed (IE can't handle it)
+		data = jQuery.trim( data );
+
+		// Make sure the incoming data is actual JSON
+		// Logic borrowed from http://json.org/json2.js
+		if ( /^[\],:{}\s]*$/.test(data.replace(/\\(?:["\\\/bfnrt]|u[0-9a-fA-F]{4})/g, "@")
+			.replace(/"[^"\\\n\r]*"|true|false|null|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?/g, "]")
+			.replace(/(?:^|:|,)(?:\s*\[)+/g, "")) ) {
+
+			// Try to use the native JSON parser first
+			return window.JSON && window.JSON.parse ?
+				window.JSON.parse( data ) :
+				(new Function("return " + data))();
+
+		} else {
+			jQuery.error( "Invalid JSON: " + data );
+		}
+	};
+
+  /* END BACK-COMPAT */
+})(this, this.document, this.jQuery);
+
+
+/**
  * jQuery.furf extensions to jQuery
  */
 ;(function (window, document, jQuery) {
@@ -30,39 +105,8 @@
   };
 
 
-  /**
-   * proxy function lifted from jQuery 1.4 for backward compatibility 
-   */
-  jQuery.proxy = jQuery.proxy || function( fn, proxy, thisObject ) {
-    if ( arguments.length === 2 ) {
-      if ( typeof proxy === "string" ) {
-        thisObject = fn;
-        fn = thisObject[ proxy ];
-        proxy = undefined;
 
-      } else if ( proxy && !jQuery.isFunction( proxy ) ) {
-        thisObject = proxy;
-        proxy = undefined;
-      }
-    }
 
-    if ( !proxy && fn ) {
-      proxy = function() {
-        return fn.apply( thisObject || this, arguments );
-      };
-    }
-
-    // Set the guid of unique handler to the same of original handler, so it
-    // can be removed
-    if ( fn ) {
-      proxy.guid = fn.guid = fn.guid || proxy.guid || jQuery.guid++;
-    }
-
-    // So proxy can be declared as an argument
-    return proxy;
-  };
-
-  
   /**
    * proxy function for event callbacks - omits event argument for better
    * compatibility with external APIs
@@ -82,14 +126,14 @@
   jQuery.white = function (arr) {
     return arr.join(' ');
   };
-  
+
 
   /**
    * Converts a whitespace-delimited string to an array
    * @param String str
    */
   var rwhite = /\s+/;
-  
+
   jQuery.unwhite = function (str) {
     str = jQuery.trim(str);
     return str.length ? str.split(rwhite) : [];
@@ -100,7 +144,7 @@
    * Set and get deeply nested properties from an object
    */
   var toString = Object.prototype.toString;
-  
+
   jQuery.deep = function (obj, prop, val) {
 
     var props = prop.split('.'),
@@ -116,9 +160,9 @@
         p = props[i++];
         obj = obj[p] = (typeof obj[p] === 'object' || toString.call(obj[p]) === '[object Function]') ? obj[p] : {};
       }
-      
+
       obj[props[i]] = val;
-      
+
       return root;
 
     // Get deep value
@@ -128,7 +172,7 @@
       return obj;
     }
   };
-  
+
 
   /**
    * Create a namespace on a supplied object
@@ -137,14 +181,14 @@
 
     var props = (ns || obj).split('.'),
         i = 0, n = props.length, p;
-    
+
     obj = (ns && obj) || window;
-    
+
     while (i < n) {
       p = props[i++];
       obj = obj[p] = (typeof obj[p] === 'object' || toString.call(obj[p]) === '[object Function]') ? obj[p] : {};
     }
-      
+
     return obj;
   };
 
@@ -178,8 +222,9 @@
 
         sourceVal = source[sourceKey];
 
-        if (property in sourceVal) {
-          targetKey = sourceVal[property];
+        targetKey = jQuery.deep(sourceVal, property);
+
+        if (targetKey) {
 
           if (targetKey in target) {
             (target[targetKey] = jQuery.ensureArray(target[targetKey])).push(sourceVal);
@@ -209,7 +254,7 @@
   jQuery.ordinal = function (n) {
     return ['th', 'st', 'nd', 'rd'][(n = n < 0 ? -n : n) > 10 && n < 14 || !(n = ~~n % 10) || n > 3 ? 0 : n];
   };
-  
+
 
   /**
    * Adds or creates an abstract interface to an object literal or prototype
@@ -219,7 +264,7 @@
   jQuery.specify = function (obj, methods) {
 
     obj = jQuery.isFunction(obj) ? obj.prototype : obj;
-    
+
     jQuery.each(jQuery.unwhite(methods), function (i, name) {
       if (!jQuery.isFunction(obj[name])) {
         obj[name] = function () {
@@ -233,21 +278,21 @@
   /**
    * Lifted from YUI 2.6.0
    * IE will not enumerate native functions in a derived object even if the
-   * function was overridden.  This is a workaround for specific functions 
-   * we care about on the Object prototype. 
+   * function was overridden.  This is a workaround for specific functions
+   * we care about on the Object prototype.
    */
   jQuery.support.nativeEnum = (function () {
-  
+
     var target = { valueOf: function () { return false; } },
         source = { valueOf: function () { return true; } },
         name;
-  
+
     for (name in source) {
       if (source.hasOwnProperty(name)) {
         target[name] = source[name];
       }
     }
-  
+
     return target.valueOf();
   })();
 
@@ -263,7 +308,7 @@
 
   /**
    * Pseudo-classical OOP inheritance
-   * @param Function child 
+   * @param Function child
    * @param Function parent
    * @param Object overrides
    */
@@ -278,17 +323,17 @@
     function F () {
       this._parent = parent.prototype;
     }
-    
+
     F.prototype = parent.prototype;
-    
+
     child.prototype = new F ();
     child.prototype.constructor = child;
     child.parent = parent.prototype;
-    
+
     if (parent.prototype.constructor === Object.prototype.constructor) {
       parent.prototype.constructor = parent;
     }
-    
+
     if (overrides) {
       for (name in overrides) {
         if (overrides.hasOwnProperty(name)) {
@@ -329,7 +374,7 @@
      * The trigger event must be augmented separately because it requires a new
      * Event to prevent unexpected triggering of a method (and possibly
      * infinite recursion) when the event type matches the method name
-     */ 
+     */
     obj.trigger = function (type, data) {
       var event = new jQuery.Event(type);
       event.preventDefault();
@@ -351,7 +396,7 @@
 
     return obj;
   };
-  
+
 
   /**
    * jQuery.loadable
@@ -375,23 +420,29 @@
      * Execute the XMLHTTPRequest
      * @param Object cfg Overload jQuery.ajax configuration object
      */
-    obj.load = function (cfg) {   
+    obj.load = function (cfg) {
 
-      var beforeSend, success, error, complete;
+      var beforeSend, dataFilter, success, error, complete;
 
-      // Allow URL as config (shortcut)
+      // If one parameter is passed, it's either a config or a callback
+      // @todo take (url, callback)
       if (typeof cfg === 'string') {
         cfg = {
           url: cfg
         };
+      } else if ($.isFunction(cfg)) {
+        cfg = {
+          success: cfg
+        };
       }
-      
+
       // Extend default config with runtime config
       cfg = jQuery.extend(true, {}, defaultCfg, cfg);
-      
+
       // Cache configured callbacks so they can be called from wrapper
       // functions below.
       beforeSend = cfg.beforeSend;
+      dataFilter = cfg.dataFilter;
       success    = cfg.success;
       error      = cfg.error;
       complete   = cfg.complete;
@@ -403,7 +454,7 @@
       // the configured callback or the unmodified arguments if no callback
       // is supplied or the return value is undefined.
       jQuery.extend(cfg, {
-        
+
         /**
          * @param XMLHTTPRequest xhr
          * @param Object cfg
@@ -417,16 +468,23 @@
 
           // Trigger the onLoadBeforeSend event listeners
           this.trigger('onLoadBeforeSend', arguments);
-          
+
           // If the request is explicitly aborted from the beforeSend
           // callback, trigger the onLoadAbort event listeners
           if (ret === false) {
             this.trigger('onLoadAbort', arguments);
           }
-          
+
           return ret;
-          
+
         }, this),
+
+
+        // just added -- doc it up
+        dataFilter: jQuery.proxy(function (response, type) {
+          return dataFilter && dataFilter.apply(this, arguments);
+        }, this),
+
 
         /**
          * @param Object data
@@ -435,36 +493,23 @@
          */
         success: jQuery.proxy(function (data, status, xhr) {
 
-          var ret;
-
           // If defined, execute the success callback
           if (success) {
-
-            // Any value explicitly returned from the success callback will 
-            // supercede the original Ajax response
-            ret = success.apply(this, arguments);
-
-            // ...but only if the value is explicitly returned
-            if (typeof ret !== 'undefined') {
-
-              // Setting the value of a function parameter will automatically
-              // update the corresponding member of the arguments "array"
-              data = ret;
-            }
+            success.apply(this, arguments);
           }
-          
+
           // Trigger the onLoadSuccess event listeners
           this.trigger('onLoadSuccess',  arguments);
-          
+
         }, this),
-        
+
         /**
          * @param XMLHTTPRequest xhr
          * @param String status
          * @param Error e
          */
         error: jQuery.proxy(function (xhr, status, e) {
-          
+
           // If defined, execute the error callback
           if (error) {
             error.apply(this, arguments);
@@ -474,7 +519,7 @@
           this.trigger('onLoadError', arguments);
 
         }, this),
-        
+
         /**
          * @param XMLHTTPRequest xhr
          * @param String status
@@ -488,11 +533,11 @@
 
           // Trigger the onLoadComplete event listeners
           this.trigger('onLoadComplete', arguments);
-          
+
         }, this)
       });
 
-      return jQuery.ajax(cfg);        
+      return jQuery.ajax(cfg);
     };
 
     return obj;
@@ -501,7 +546,7 @@
 
   /**
    * jQuery.renderable
-   * 
+   *
    * @param Object obj Object to be augmented with renderable behavior
    * @param String tpl Template or URL to template file
    * @param Various elem (optional) Target DOM element
@@ -511,7 +556,7 @@
     // Implement bindable behavior, adding custom methods for render events
     obj = jQuery.bindable(obj, 'onBeforeRender onRender');
 
-    // Create a jQuery target to handle DOM load 
+    // Create a jQuery target to handle DOM load
     if (typeof elem !== 'undefined') {
       elem = jQuery(elem);
     }
@@ -521,18 +566,18 @@
 
     // Augment the object with a render method
     obj.render = function (data, raw) {
-      
+
       this.trigger('onBeforeRender', [data]);
 
       // Force raw HTML if elem exists (saves effort)
-      var ret = renderer(data, !!elem || raw);        
-      
+      var ret = renderer(data, !!elem || raw);
+
       if (elem) {
         elem.html(ret);
       }
-      
+
       this.trigger('onRender', [ret]);
-      
+
       return ret;
     };
 
@@ -554,7 +599,7 @@
     jQuery.extend(obj, {
 
       /**
-       * @param String method 
+       * @param String method
        * @return Boolean
        */
       isExecuting: function (method) {
@@ -568,16 +613,16 @@
        * @param Boolean immediately
        */
       start: function (method, interval, data, immediately) {
-        
+
         var self, timers;
-        
+
         if (typeof data === 'boolean') {
           immediately = data;
           data = null;
         }
 
         data = data || [];
-        
+
         if (!this.isExecuting(method) && jQuery.isFunction(this[method]) && interval > 0) {
 
           self   = jQuery(this);
@@ -596,12 +641,12 @@
 
           // Fire onStart event with method name
           this.trigger('onStart', [method]);
-          
+
           if (immediately) {
             this[method].proxy();
           }
         }
-        
+
         return this;
       },
 
@@ -609,25 +654,25 @@
        * @param String method
        */
       stop: function (method) {
-        
+
         var self, timers;
-        
+
         if (this.isExecuting(method)) {
 
           self   = jQuery(this);
           timers = self.data('pollable.timers') || {};
-          
+
           // Clear timer
           window.clearInterval(timers[method]);
-          
+
           // Remove timer from hash
           delete timers[method];
-          
+
           // Remove proxy method from original method
           delete this[method].proxy;
-          
+
           self.data('pollable.timers', timers);
-          
+
           // Fire onStop event with method name
           this.trigger('onStop', [method]);
         }
@@ -646,74 +691,74 @@
   //  * @param Object obj Object to be augmented with cacheable behavior
   //  */
   // jQuery.cacheable = function (obj) {
-  // 
+  //
   //   // Allow use of prototype for shorthanding the augmentation of classes
   //   obj = obj.prototype || obj;
-  //   
+  //
   //   jQuery.extend(obj, {
-  //     
+  //
   //     cacheSet: function(key, value, ttl) {
-  // 
+  //
   //       var self  = jQuery(this),
   //           cache = self.data('cacheable.cache') || {};
-  // 
+  //
   //       cache[key] = {
   //         value: value,
   //         time:  ttl && new Date(),
   //         ttl:   ttl
   //       };
-  // 
+  //
   //       self.data('cacheable.cache', cache);
   //     },
-  //             
+  //
   //     cacheGet: function(key) {
-  // 
+  //
   //       var cache = jQuery(this).data('cacheable.cache') || {},
   //           data;
-  // 
+  //
   //       if (key) {
-  // 
+  //
   //         if (key in cache) {
-  //           
+  //
   //           data = cache[key];
-  //           
+  //
   //           if (data.ttl && (new Date()) - data.ttl > data.time) {
   //             this.cacheUnset(key);
   //           } else {
   //             return data.value;
   //           }
   //         }
-  // 
+  //
   //       } else {
   //         return cache;
   //       }
   //     },
-  //             
+  //
   //     cacheHas: function(key) {
   //       var cache = jQuery(this).data('cacheable.cache') || {};
   //       return (key in cache);
   //     },
-  //                             
+  //
   //     cacheUnset: function(key) {
-  //       
+  //
   //       var self  = jQuery(this),
   //           cache = self.data('cacheable.cache');
-  //       
+  //
   //       if (cache && key in cache) {
-  //         
+  //
   //         cache[key] = undefined;
   //         delete cache[key];
-  // 
+  //
   //         self.data('cacheable.cache', cache);
   //       }
   //     },
-  //             
+  //
   //     cacheEmpty: function() {
   //       jQuery(this).data('cacheable.cache', {});
   //     }
-  // 
+  //
   //   });
-  //   
+  //
   //   return obj;
   // };
 
