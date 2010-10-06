@@ -222,7 +222,8 @@
 
         sourceVal = source[sourceKey];
 
-        targetKey = jQuery.deep(sourceVal, property);
+        // Convert to string to allow rehashing by booleans!
+        targetKey = '' + jQuery.deep(sourceVal, property);
 
         if (targetKey) {
 
