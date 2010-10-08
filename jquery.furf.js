@@ -487,8 +487,8 @@
 
 
           // just added -- doc it up
-          dataFilter: jQuery.proxy(function (response, type) {
-            return dataFilter && dataFilter.apply(this, arguments);
+          dataFilter: dataFilter && jQuery.proxy(function (response, type) {
+            return dataFilter.apply(this, arguments);
           }, this),
 
 
