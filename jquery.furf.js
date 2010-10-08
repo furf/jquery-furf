@@ -407,6 +407,8 @@
    */
   jQuery.loadable = function (obj, defaultCfg) {
 
+    // @todo support instantiation without obj
+
     // Implement bindable behavior, adding custom methods for Ajax events
     obj = jQuery.bindable(obj, 'onLoadBeforeSend onLoadAbort onLoadSuccess onLoadError onLoadComplete');
 
@@ -424,7 +426,7 @@
        * Refactored out of load() for easier integration with everyone's
        * favorite sequential AJAX library...
        */
-      mergeLoadableConfig: function (cfg) {
+      loadable: function (cfg) {
 
         var beforeSend, dataFilter, success, error, complete;
 
@@ -559,7 +561,7 @@
        * @param Object cfg Overload jQuery.ajax configuration object
        */
       load: function (cfg) {
-        return jQuery.ajax(this.mergeLoadableConfig(cfg));
+        return jQuery.ajax(this.loadable(cfg));
       }
       
     });
