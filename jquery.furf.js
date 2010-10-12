@@ -209,6 +209,28 @@
   };
 
 
+  // @todo incorporate ensureDate
+  jQuery.floorDate = function (floor /*, date, clone */) {
+
+    var clone = (arguments[2] === true),
+        date  = (typeof arguments[1] !== 'undefined') ? arguments[1] : new Date();
+  
+    if (clone || !(date instanceof Date)) {
+      date = new Date(date);
+    }
+
+    switch(floor) {
+      case 'year':   date.setMonth(0);
+      case 'month':  date.setDate(1);
+      case 'day':    date.setHours(0);
+      case 'hour':   date.setMinutes(0);
+      case 'minute': date.setSeconds(0);
+      default:       date.setMilliseconds(0);
+    }
+  
+    return date;
+  };
+
   /**
    * Re-index an object, optionally maintaining the original index and/or
    * modifying the original object (instead of a clone)
