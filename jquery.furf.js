@@ -561,7 +561,7 @@
        * @param Object cfg Overload jQuery.ajax configuration object
        */
       load: function (cfg) {
-        return jQuery.ajax(this.loadable(cfg));
+        return jQuery.ajax(this.loadableConfig(cfg));
       }
       
     });
