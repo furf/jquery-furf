@@ -426,7 +426,7 @@
        * Refactored out of load() for easier integration with everyone's
        * favorite sequential AJAX library...
        */
-      loadable: function (cfg) {
+      loadableConfig: function (cfg) {
 
         var beforeSend, dataFilter, success, error, complete;
 
