@@ -441,7 +441,7 @@
       };
     }
 
-    $.extend(obj, {
+    jQuery.extend(obj, {
       
       /**
        * Merge runtime config with default config
@@ -458,7 +458,7 @@
           cfg = {
             url: cfg
           };
-        } else if ($.isFunction(cfg)) {
+        } else if (jQuery.isFunction(cfg)) {
           cfg = {
             success: cfg
           };
@@ -733,81 +733,103 @@
 
 
 
-  // /**
-  //  * jQuery.cacheable
-  //  *
-  //  * @param Object obj Object to be augmented with cacheable behavior
-  //  */
-  // jQuery.cacheable = function (obj) {
-  //
-  //   // Allow use of prototype for shorthanding the augmentation of classes
-  //   obj = obj.prototype || obj;
-  //
-  //   jQuery.extend(obj, {
-  //
-  //     cacheSet: function(key, value, ttl) {
-  //
-  //       var self  = jQuery(this),
-  //           cache = self.data('cacheable.cache') || {};
-  //
-  //       cache[key] = {
-  //         value: value,
-  //         time:  ttl && new Date(),
-  //         ttl:   ttl
-  //       };
-  //
-  //       self.data('cacheable.cache', cache);
-  //     },
-  //
-  //     cacheGet: function(key) {
-  //
-  //       var cache = jQuery(this).data('cacheable.cache') || {},
-  //           data;
-  //
-  //       if (key) {
-  //
-  //         if (key in cache) {
-  //
-  //           data = cache[key];
-  //
-  //           if (data.ttl && (new Date()) - data.ttl > data.time) {
-  //             this.cacheUnset(key);
-  //           } else {
-  //             return data.value;
-  //           }
-  //         }
-  //
-  //       } else {
-  //         return cache;
-  //       }
-  //     },
-  //
-  //     cacheHas: function(key) {
-  //       var cache = jQuery(this).data('cacheable.cache') || {};
-  //       return (key in cache);
-  //     },
-  //
-  //     cacheUnset: function(key) {
-  //
-  //       var self  = jQuery(this),
-  //           cache = self.data('cacheable.cache');
-  //
-  //       if (cache && key in cache) {
-  //
-  //         cache[key] = undefined;
-  //         delete cache[key];
-  //
-  //         self.data('cacheable.cache', cache);
-  //       }
-  //     },
-  //
-  //     cacheEmpty: function() {
-  //       jQuery(this).data('cacheable.cache', {});
-  //     }
-  //
-  //   });
-  //
-  //   return obj;
-  // };
+  /**
+   * jQuery.cacheable
+   *
+   * @param Object obj Object to be augmented with cacheable behavior
+   */
+  jQuery.cacheable = function (obj) {
+  
+    // Allow use of prototype for shorthanding the augmentation of classes
+    obj = obj.prototype || obj;
+  
+    jQuery.extend(obj, {
+  
+      cacheSet: function(key, value, ttl) {
+  
+        var self  = jQuery(this),
+            cache = self.data('cacheable.cache') || {};
+
+        cache[key] = {
+          value: value,
+          time:  ttl && new Date(),
+          ttl:   ttl
+        };
+  
+        self.data('cacheable.cache', cache);
+      },
+  
+      cacheGet: function(key) {
+  
+        var cache = jQuery(this).data('cacheable.cache') || {},
+            data;
+  
+        if (key) {
+  
+          if (key in cache) {
+  
+            data = cache[key];
+  
+            if (data.ttl && (new Date()) - data.ttl > data.time) {
+              this.cacheUnset(key);
+            } else {
+              return data.value;
+            }
+          }
+  
+        } else {
+          return cache;
+        }
+      },
+  
+      cacheHas: function(key) {
+        var cache = jQuery(this).data('cacheable.cache') || {};
+        return (key in cache);
+      },
+  
+      cacheUnset: function(key) {
+  
+        var self  = jQuery(this),
+            cache = self.data('cacheable.cache');
+  
+        if (cache && key in cache) {
+  
+          cache[key] = undefined;
+          delete cache[key];
+  
+          self.data('cacheable.cache', cache);
+        }
+      },
+  
+      cacheEmpty: function() {
+        jQuery(this).data('cacheable.cache', {});
+      }
+  
+    });
+  
+    return obj;
+  };
+
+
+  /**
+   * Singleton sugar!
+   * Allows you to call prototypal methods statically from the constructor
+   * on a global instance -- allowing for singleton AND classical use.
+   */
+  jQuery.singleton = function (constructor) {
+
+    var instance;
+
+    jQuery.each(constructor.prototype, function (name, fn) {
+      constructor[name] = function () {          
+        if (!instance) {
+          instance = new constructor();
+        }
+        return fn.apply(instance, arguments);
+      };
+    });
+
+    return constructor;
+  };
 
 })(this, this.document, this.jQuery);
