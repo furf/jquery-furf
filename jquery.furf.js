@@ -732,28 +732,35 @@
   };
 
 
+  jQuery.now = function () {
+    return (new Date()).getTime();
+  };
+
 
   /**
    * jQuery.cacheable
    *
    * @param Object obj Object to be augmented with cacheable behavior
    */
-  jQuery.cacheable = function (obj) {
+  jQuery.cacheable = function (obj, defaultTtl) {
   
     // Allow use of prototype for shorthanding the augmentation of classes
     obj = obj.prototype || obj;
+  
+    // I love using Infinity
+    defaultTtl = defaultTtl || Infinity;
   
     jQuery.extend(obj, {
   
       cacheSet: function(key, value, ttl) {
   
-        var self  = jQuery(this),
-            cache = self.data('cacheable.cache') || {};
+        var self    = jQuery(this),
+            cache   = self.data('cacheable.cache') || {},
+            expires = jQuery.now() + (typeof ttl !== 'undefined' ? ttl : defaultTtl);
 
         cache[key] = {
-          value: value,
-          time:  ttl && new Date(),
-          ttl:   ttl
+          value:   value,
+          expires: expires
         };
   
         self.data('cacheable.cache', cache);
@@ -770,7 +777,7 @@
   
             data = cache[key];
   
-            if (data.ttl && (new Date()) - data.ttl > data.time) {
+            if (data.expires < jQuery.now()) {
               this.cacheUnset(key);
             } else {
               return data.value;
@@ -783,7 +790,7 @@
       },
   
       cacheHas: function(key) {
-        var cache = jQuery(this).data('cacheable.cache') || {};
+        var cache = jQuery(this).data('cacheable.cache');
         return (key in cache);
       },
   
@@ -794,7 +801,7 @@
   
         if (cache && key in cache) {
   
-          cache[key] = undefined;
+          cache[key] = null;
           delete cache[key];
   
           self.data('cacheable.cache', cache);
@@ -820,13 +827,15 @@
 
     var instance;
 
-    jQuery.each(constructor.prototype, function (name, fn) {
-      constructor[name] = function () {          
-        if (!instance) {
-          instance = new constructor();
-        }
-        return fn.apply(instance, arguments);
-      };
+    jQuery.each(constructor.prototype, function (key, val) {
+      if ($.isFunction(val)) {
+        constructor[key] = function () {          
+          if (!instance) {
+            instance = new constructor();
+          }
+          return val.apply(instance, arguments);
+        };
+      }
     });
 
     return constructor;
