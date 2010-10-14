@@ -748,7 +748,7 @@
     obj = obj.prototype || obj;
   
     // I love using Infinity
-    defaultTtl = defaultTtl || Infinity;
+    defaultTtl = typeof defaultTtl !== 'undefined' ? defaultTtl : Infinity;
   
     jQuery.extend(obj, {
   
@@ -818,27 +818,27 @@
   };
 
 
-  /**
-   * Singleton sugar!
-   * Allows you to call prototypal methods statically from the constructor
-   * on a global instance -- allowing for singleton AND classical use.
-   */
-  jQuery.singleton = function (constructor) {
-
-    var instance;
-
-    jQuery.each(constructor.prototype, function (key, val) {
-      if ($.isFunction(val)) {
-        constructor[key] = function () {          
-          if (!instance) {
-            instance = new constructor();
-          }
-          return val.apply(instance, arguments);
-        };
-      }
-    });
-
-    return constructor;
-  };
+  // /**
+  //  * Singleton sugar!
+  //  * Allows you to call prototypal methods statically from the constructor
+  //  * on a global instance -- allowing for singleton AND classical use.
+  //  */
+  // jQuery.singleton = function (constructor) {
+  // 
+  //   var instance;
+  // 
+  //   jQuery.each(constructor.prototype, function (key, val) {
+  //     if ($.isFunction(val)) {
+  //       constructor[key] = function () {          
+  //         if (!instance) {
+  //           instance = new constructor();
+  //         }
+  //         return val.apply(instance, arguments);
+  //       };
+  //     }
+  //   });
+  // 
+  //   return constructor;
+  // };
 
 })(this, this.document, this.jQuery);
