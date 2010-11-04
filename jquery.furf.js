@@ -403,7 +403,9 @@
           all   = new jQuery.Event(event);
       event.preventDefault();
       all.type = '*';
-      jQuery(this).trigger(event, data);
+      if (event.type !== '*') {
+        jQuery(this).trigger(event, data);
+      }
       jQuery(this).trigger(all, data);
       return this;
     };
