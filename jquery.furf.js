@@ -399,9 +399,12 @@
      * infinite recursion) when the event type matches the method name
      */
     obj.trigger = function (type, data) {
-      var event = new jQuery.Event(type);
+      var event = new jQuery.Event(type),
+          all   = new jQuery.Event(event);
       event.preventDefault();
+      all.type = '*';
       jQuery(this).trigger(event, data);
+      jQuery(this).trigger(all, data);
       return this;
     };
 
